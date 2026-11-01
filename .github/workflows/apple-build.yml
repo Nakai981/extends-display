@@ -1,0 +1,14 @@
+name: Apple build and tests
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install xcodegen
+      - run: bash scripts/build-mac.sh
+      - name: Unit tests on available iPhone simulator
+        shell: bash
+        run: |
+          DEVICE_ID=$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); print(next(x["udid"] for values in d["devices"].values() for x in values if "iPhone" in x["name"]))')
+          bash scripts/test-mac.sh "platform=iOS Simulator,id=$DEVICE_ID"

@@ -1,0 +1,26 @@
+name: ExtendDeskLink
+options:
+  deploymentTarget:
+    macOS: '14.0'
+targets:
+  ExtendDeskLink:
+    type: application
+    platform: macOS
+    sources:
+      - Sources
+      - ../Sources/LocalHTTPServer.swift
+    info:
+      path: Config/Info.plist
+      properties:
+        CFBundleDisplayName: ExtendDesk Link
+        NSHighResolutionCapable: true
+        NSLocalNetworkUsageDescription: Share this Mac display with ExtendDesk over your private network.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.extenddesk.link
+        SWIFT_VERSION: '5.0'
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_APP_SANDBOX: NO
+        GENERATE_INFOPLIST_FILE: NO
+        MARKETING_VERSION: '0.1.0'
+        CURRENT_PROJECT_VERSION: 1

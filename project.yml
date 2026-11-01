@@ -1,0 +1,61 @@
+name: ExtendDesk
+options:
+  bundleIdPrefix: com.extenddesk
+  deploymentTarget:
+    iOS: '16.0'
+schemes:
+  ExtendDesk:
+    build:
+      targets:
+        ExtendDesk: all
+    test:
+      targets: [ExtendDeskTests]
+targets:
+  ExtendDesk:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    info:
+      path: Config/Info.plist
+      properties:
+        CFBundleDisplayName: ExtendDesk
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UILaunchScreen: {}
+        UISupportsDocumentBrowser: false
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true
+        NSCameraUsageDescription: Camera access for websites you choose to use.
+        NSMicrophoneUsageDescription: Microphone access for websites you choose to use.
+        NSPhotoLibraryUsageDescription: Select photos to display on your desktop.
+        PHPhotoLibraryPreventAutomaticLimitedAccessAlert: true
+        NSLocalNetworkUsageDescription: Share your desktop with a browser on your private local network when you start LAN sharing.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Device
+                UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).DeviceSceneDelegate
+            UIWindowSceneSessionRoleExternalDisplayNonInteractive:
+              - UISceneConfigurationName: External
+                UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).ExternalSceneDelegate
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.extenddesk.app
+        SWIFT_VERSION: '5.0'
+        TARGETED_DEVICE_FAMILY: '1,2'
+        SUPPORTS_MACCATALYST: false
+        CODE_SIGN_STYLE: Automatic
+        MARKETING_VERSION: '0.3.0'
+        CURRENT_PROJECT_VERSION: 3
+  ExtendDeskTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    dependencies:
+      - target: ExtendDesk
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES

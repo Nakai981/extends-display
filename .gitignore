@@ -1,0 +1,9 @@
+.DS_Store
+build/
+DerivedData/
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+Config/Info.plist
+MacCompanion/Config/Info.plist
+__pycache__/
