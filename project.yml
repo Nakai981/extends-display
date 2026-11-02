@@ -8,6 +8,9 @@ schemes:
     build:
       targets:
         ExtendDesk: all
+    run:
+      config: Release
+      debugEnabled: false
     test:
       targets: [ExtendDeskTests]
 targets:

@@ -6,6 +6,16 @@
 
 ## Build trên Mac
 
+Để mở Xcode và chạy Release trên iPhone/iPad thật:
+
+```bash
+cd ~/Downloads/extends-display
+git pull origin main
+bash scripts/open-xcode-release.sh
+```
+
+Script sinh project và mở Xcode. Scheme **ExtendDesk → Run** dùng **Release**, tắt debugger. Chọn iPhone/iPad đã kết nối và nhấn **⌘R**. Lần đầu chọn Team trong Signing & Capabilities. Script không tự chọn thiết bị, không nhấn Run và không tự pull/ghi đè thay đổi Git. Muốn debug: Edit Scheme → Run → Info → chọn Debug và bật Debug executable; sinh project lại sẽ phục hồi Release như trong `project.yml`.
+
 1. Cài Xcode đầy đủ và mở một lần để cài platform iOS. Chọn Xcode trong Settings → Locations → Command Line Tools.
 2. Chép toàn bộ thư mục này sang Mac hoặc đồng bộ bằng Git.
 3. Cài [XcodeGen](https://github.com/yonaskolb/XcodeGen): `brew install xcodegen`.
