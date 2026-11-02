@@ -18,9 +18,9 @@ struct PhotoSlideshow {
     }
     mutating func move(_ offset: Int) {
         guard count > 0 else { return }
-        guard let selectedIndex else { self.selectedIndex = offset < 0 ? count - 1 : 0; return }
-        let next = (selectedIndex + offset) % count
-        selectedIndex = next >= 0 ? next : next + count
+        guard let currentIndex = selectedIndex else { self.selectedIndex = offset < 0 ? count - 1 : 0; return }
+        let next = (currentIndex + offset) % count
+        self.selectedIndex = next >= 0 ? next : next + count
     }
     mutating func setPlaying(_ playing: Bool) {
         self.playing = playing && count > 0
