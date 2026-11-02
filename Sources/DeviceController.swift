@@ -29,7 +29,7 @@ final class DeviceController: UIViewController, UIGestureRecognizerDelegate, UIT
         let icon = UIImageView(image: UIImage(systemName: "hand.draw")); icon.tintColor = .systemGray; icon.contentMode = .scaleAspectFit
         icon.translatesAutoresizingMaskIntoConstraints = false; pad.addSubview(icon)
         NSLayoutConstraint.activate([icon.centerXAnchor.constraint(equalTo: pad.centerXAnchor), icon.centerYAnchor.constraint(equalTo: pad.centerYAnchor), icon.widthAnchor.constraint(equalToConstant: 54), icon.heightAnchor.constraint(equalToConstant: 54)])
-        let pan = UIPanGestureRecognizer(target: self, action: #selector(move(_:))); pan.maximumNumberOfTouches = 2; pan.delegate = self; pad.addGestureRecognizer(pan)
+        let pan = UIPanGestureRecognizer(target: self, action: #selector(handleTrackpadPan(_:))); pan.maximumNumberOfTouches = 2; pan.delegate = self; pad.addGestureRecognizer(pan)
         let tap = UITapGestureRecognizer(target: self, action: #selector(click)); pad.addGestureRecognizer(tap)
         let secondary = UITapGestureRecognizer(target: self, action: #selector(rightClick)); secondary.numberOfTouchesRequired = 2; pad.addGestureRecognizer(secondary); tap.require(toFail: secondary)
         let hold = UILongPressGestureRecognizer(target: self, action: #selector(hold(_:))); hold.minimumPressDuration = 0.3; hold.delegate = self; pad.addGestureRecognizer(hold)
@@ -121,7 +121,7 @@ final class DeviceController: UIViewController, UIGestureRecognizerDelegate, UIT
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
         (gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UILongPressGestureRecognizer) || (gestureRecognizer is UILongPressGestureRecognizer && otherGestureRecognizer is UIPanGestureRecognizer)
     }
-    @objc private func move(_ gesture: UIPanGestureRecognizer) {
+    @objc private func handleTrackpadPan(_ gesture: UIPanGestureRecognizer) {
         let delta = gesture.translation(in: pad); gesture.setTranslation(.zero, in: pad)
         if gesture.numberOfTouches == 2 { Workspace.shared.activeDesktop?.scroll(CGPoint(x: -delta.x, y: -delta.y)) }
         else { Workspace.shared.activeDesktop?.movePointer(CGPoint(x: delta.x * Workspace.shared.pointerSpeed, y: delta.y * Workspace.shared.pointerSpeed)) }
