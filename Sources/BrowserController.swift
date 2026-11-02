@@ -64,7 +64,12 @@ final class BrowserController: UIViewController, WKNavigationDelegate, WKUIDeleg
         configure(back, symbol: "chevron.left", label: "Back") { [weak self] in self?.web.goBack() }
         configure(forward, symbol: "chevron.right", label: "Forward") { [weak self] in self?.web.goForward() }
         configure(reloadButton, symbol: "arrow.clockwise", label: "Reload") { [weak self] in
-            guard let self else { return }; web.isLoading ? web.stopLoading() : web.reload()
+            guard let self else { return }
+            if self.web.isLoading {
+                self.web.stopLoading()
+            } else {
+                self.web.reload()
+            }
         }
         [back, forward, reloadButton].forEach { toolbar.addArrangedSubview($0); $0.widthAnchor.constraint(equalToConstant: 30).isActive = true }
         address.borderStyle = .roundedRect; address.autocapitalizationType = .none; address.autocorrectionType = .no

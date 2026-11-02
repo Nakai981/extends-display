@@ -9,6 +9,15 @@ spec.loader.exec_module(diagnostics)
 
 
 class BuildDiagnosticTests(unittest.TestCase):
+    def test_ci_annotation_reports_the_browser_error_at_its_source_line(self):
+        root = "/Users/runner/work/extends-display/extends-display"
+        error = root + "/Sources/BrowserController.swift:67:65: error: result values have mismatching types 'Void' and 'WKNavigation?'"
+        self.assertEqual(diagnostics.github_annotations(error + "\n" + error, root), ["::error file=Sources/BrowserController.swift,line=67,col=65::result values have mismatching types 'Void' and 'WKNavigation?'"])
+
+    def test_ci_annotation_excludes_warnings_and_escapes_property_delimiters(self):
+        log = "/repo/Sources/Name,With:Parts.swift:12:3: error: 100% invalid\n/repo/Sources/Other.swift:1:1: warning: ignored"
+        self.assertEqual(diagnostics.github_annotations(log, "/repo"), ["::error file=Sources/Name%2CWith%3AParts.swift,line=12,col=3::100%25 invalid"])
+
     def test_user_warning_and_failed_summary_are_not_a_root_error(self):
         log = """48 | DispatchQueue.main.async { [weak self] in
 warning: 'weak' ownership of capture 'self' differs from implicitly-captured strong reference in outer scope
