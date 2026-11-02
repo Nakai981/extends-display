@@ -43,7 +43,7 @@ final class DesktopController: UIViewController, UIGestureRecognizerDelegate {
         overrideUserInterfaceStyle = DesktopPreferences.shared.interfaceStyle
         view.addSubview(wallpaper); view.addSubview(canvas); canvas.addSubview(desktopIcons)
         desktopIcons.onOpen = { Workspace.shared.open(.files, url: $0.absoluteString) }
-        desktopIcons.onContext = { [weak self] url, point in guard let self else { return }; showFileMenu(url, at: desktopIcons.convert(point, to: view)) }
+        desktopIcons.onContext = { [weak self] url, point in guard let self else { return }; self.showFileMenu(url, at: self.desktopIcons.convert(point, to: self.view)) }
         menu.axis = .horizontal; menu.spacing = 6; menu.alignment = .center
         menu.backgroundColor = .clear
         menu.isLayoutMarginsRelativeArrangement = true
@@ -455,7 +455,7 @@ extension DesktopController {
         config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { var attributes = $0; attributes.font = .systemFont(ofSize: 13); return attributes }
         let button = UIButton(configuration: config)
         button.addAction(UIAction { [weak self, weak button] _ in
-            guard let self, let button else { return }; showMenu(items(for: section), at: button.convert(CGPoint(x: 0, y: button.bounds.height + 4), to: view))
+            guard let self, let button else { return }; self.showMenu(self.items(for: section), at: button.convert(CGPoint(x: 0, y: button.bounds.height + 4), to: self.view))
         }, for: .touchUpInside)
         return button
     }
@@ -470,8 +470,8 @@ extension DesktopController {
             return [DesktopMenuItem(title: "About ExtendDesk", symbol: "info.circle", action: { [weak self] in self?.showInformation("ExtendDesk", message: "A desktop workspace powered by your iPhone or iPad.\nUse File, View and Window to manage your apps.") }),
                     DesktopMenuItem(title: "System Settings…", symbol: "gearshape", shortcut: "⌘,", action: { Workspace.shared.activate(.settings) }),
                     DesktopMenuItem(title: "Applications", symbol: "square.grid.2x2", action: { [weak self] in self?.showLauncher() }),
-                    DesktopMenuItem(title: "File Menu", symbol: "doc", action: { [weak self] in guard let self else { return }; showMenu(items(for: .file), at: CGPoint(x: 16, y: 42)) }),
-                    DesktopMenuItem(title: "View Menu", symbol: "eye", action: { [weak self] in guard let self else { return }; showMenu(items(for: .view), at: CGPoint(x: 16, y: 42)) }),
+                    DesktopMenuItem(title: "File Menu", symbol: "doc", action: { [weak self] in guard let self else { return }; self.showMenu(self.items(for: .file), at: CGPoint(x: 16, y: 42)) }),
+                    DesktopMenuItem(title: "View Menu", symbol: "eye", action: { [weak self] in guard let self else { return }; self.showMenu(self.items(for: .view), at: CGPoint(x: 16, y: 42)) }),
                     DesktopMenuItem(title: "Show Desktop", symbol: "menubar.dock.rectangle", shortcut: "⌃⌘D", checked: Workspace.shared.desktopRevealed, action: { Workspace.shared.toggleDesktop() })]
         case .file:
             return [DesktopMenuItem(title: "New Browser Window", symbol: "globe", shortcut: "⌘N", action: { Workspace.shared.open(.browser) }),
@@ -586,7 +586,7 @@ extension DesktopController {
     private func showFileMenu(_ url: URL, at point: CGPoint) {
         var rows = [DesktopMenuItem(title: "Open", symbol: "arrow.up.forward.square", action: { Workspace.shared.open(.files, url: url.absoluteString) }), DesktopMenuItem(title: "Reveal in Files", symbol: "folder", action: { Workspace.shared.open(.files, url: url.deletingLastPathComponent().absoluteString) })]
         if FileOperations.contains(url, in: Workspace.desktopFolder), url != Workspace.desktopFolder {
-            rows.append(DesktopMenuItem(title: "Rename…", symbol: "pencil", action: { [weak self] in self?.askName("Rename", initial: url.lastPathComponent) { name in self?.runFileOperation { _ = try FileOperations.rename(url, to: name) } } }))
+            rows.append(DesktopMenuItem(title: "Rename…", symbol: "pencil", action: { [weak self] in self?.askName("Rename", initial: url.lastPathComponent) { [weak self = self] name in self?.runFileOperation { _ = try FileOperations.rename(url, to: name) } } }))
         }
         showMenu(rows, at: point)
     }
@@ -627,7 +627,7 @@ extension DesktopController {
     private func runFileOperation(_ operation: @escaping () throws -> Void) {
         FileOperations.queue.async { [weak self] in
             do { try operation(); DispatchQueue.main.async { NotificationCenter.default.post(name: .filesChanged, object: nil) } }
-            catch { DispatchQueue.main.async { self?.showInformation("File operation failed", message: error.localizedDescription) } }
+            catch { DispatchQueue.main.async { [weak self = self] in self?.showInformation("File operation failed", message: error.localizedDescription) } }
         }
     }
 }

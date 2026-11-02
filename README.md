@@ -2,7 +2,7 @@
 
 Ứng dụng Swift iOS lấy cảm hứng từ desktop mode của XeOS/DeX. Dành cho iPhone 15 và iPad mini 6 kết nối màn hình ngoài. Tên, mã nguồn và UI riêng; không sử dụng mã nguồn/tài nguyên độc quyền của XeOS.
 
-**Trạng thái: bản alpha 0.3, chưa được build bằng Apple SDK hoặc chạy trên thiết bị thật.** Máy phát triển hiện tại là Windows, không có Xcode. Kiểm tra cú pháp không chứng minh app biên dịch hay hoạt động. Xem `docs/STATUS.md` để biết phần đã viết, giới hạn và phần chưa làm. Thay đổi mới ở `docs/UPGRADE-0.3.md`; bản xem thiết kế trên Windows ở `preview/desktop.html`.
+**Trạng thái: bản alpha 0.3.1, chưa được xác nhận build thành công bằng Apple SDK hoặc chạy trên thiết bị thật.** Đã sửa lỗi capture compiler do người dùng báo; xem `docs/FIX-0.3.1.md`. Máy phát triển hiện tại là Windows, không có Xcode. Kiểm tra cú pháp không chứng minh app biên dịch hay hoạt động. Xem `docs/STATUS.md` và `docs/UPGRADE-0.3.md`; bản xem thiết kế trên Windows ở `preview/desktop.html`.
 
 ## Build trên Mac
 
@@ -16,6 +16,8 @@ bash scripts/build-mac.sh
 ```
 
 Lệnh tạo `ExtendDesk.xcodeproj`, build iOS Simulator và app Mac đồng hành. Sau đó mở `ExtendDesk.xcodeproj`, chọn target ExtendDesk → Signing & Capabilities → Team của bạn. Đổi bundle identifier nếu cần. Chọn iPhone/iPad đã cắm vào Mac, bật Developer Mode trên thiết bị, rồi Run. Build script không ký app cho thiết bị.
+
+Log đầy đủ từng target nằm trong `build/logs/`. Nếu build thất bại, script in các dòng `error:` có context; gửi các block này để chẩn đoán, vì warning và phần tổng kết `BUILD FAILED` chưa đủ xác định nguyên nhân.
 
 Chạy unit tests trên simulator đã cài:
 

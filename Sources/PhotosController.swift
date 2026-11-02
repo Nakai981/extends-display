@@ -65,8 +65,8 @@ final class PhotosController: ToolController, UICollectionViewDataSource, UIColl
         for name in [UIApplication.didReceiveMemoryWarningNotification, UIApplication.didEnterBackgroundNotification] {
             observers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] notification in
                 guard let self else { return }
-                if notification.name == UIApplication.didEnterBackgroundNotification { suspendForInactiveApp() }
-                else { pause(); imageManager.stopCachingImagesForAllAssets(); cancelPreview() }
+                if notification.name == UIApplication.didEnterBackgroundNotification { self.suspendForInactiveApp() }
+                else { self.pause(); self.imageManager.stopCachingImagesForAllAssets(); self.cancelPreview() }
             })
         }
         observers.append(NotificationCenter.default.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { [weak self] _ in self?.suspendForInactiveApp() })
@@ -131,15 +131,15 @@ final class PhotosController: ToolController, UICollectionViewDataSource, UIColl
                 let same = PHAsset.fetchAssets(withLocalIdentifiers: [selectedID], options: nil)
                 if let asset = same.firstObject { let index = result.index(of: asset); if index != NSNotFound { selected = index } }
             }
-            DispatchQueue.main.async {
-                guard let self, appActive, UIApplication.shared.applicationState == .active,
-                      libraryGeneration == generation, access == .authorized || access == .limited else { return }
-                imageManager.stopCachingImagesForAllAssets(); cancelPreview()
-                assets = result; slideshow.updateCount(result.count)
-                if let selected { slideshow.select(selected) }
-                if result.count == 0 { previewing = false; presentationOnly = false; imageView.image = nil }
-                collection.reloadData(); updateEmptyState(); updateControls(); view.setNeedsLayout()
-                if previewing { requestPreview() }
+            DispatchQueue.main.async { [weak self = self] in
+                guard let self, self.appActive, UIApplication.shared.applicationState == .active,
+                      self.libraryGeneration == generation, self.access == .authorized || self.access == .limited else { return }
+                self.imageManager.stopCachingImagesForAllAssets(); self.cancelPreview()
+                self.assets = result; self.slideshow.updateCount(result.count)
+                if let selected { self.slideshow.select(selected) }
+                if result.count == 0 { self.previewing = false; self.presentationOnly = false; self.imageView.image = nil }
+                self.collection.reloadData(); self.updateEmptyState(); self.updateControls(); self.view.setNeedsLayout()
+                if self.previewing { self.requestPreview() }
             }
         }
     }
@@ -173,7 +173,7 @@ final class PhotosController: ToolController, UICollectionViewDataSource, UIColl
     private func manageAccess() {
         switch access {
         case .notDetermined:
-            PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] _ in DispatchQueue.main.async { self?.refreshLibrary() } }
+            PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] _ in DispatchQueue.main.async { [weak self = self] in self?.refreshLibrary() } }
         case .limited: PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: presenter)
         case .denied:
             if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
@@ -183,10 +183,10 @@ final class PhotosController: ToolController, UICollectionViewDataSource, UIColl
     }
     nonisolated func photoLibraryDidChange(_ changeInstance: PHChange) {
         DispatchQueue.main.async { [weak self] in
-            guard let self, appActive else { return }
-            pendingLibraryRefresh?.cancel()
-            let work = DispatchWorkItem { [weak self] in self?.refreshLibrary() }
-            pendingLibraryRefresh = work; DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: work)
+            guard let self, self.appActive else { return }
+            self.pendingLibraryRefresh?.cancel()
+            let work = DispatchWorkItem { [weak self = self] in self?.refreshLibrary() }
+            self.pendingLibraryRefresh = work; DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: work)
         }
     }
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int { assets?.count ?? 0 }
@@ -198,7 +198,7 @@ final class PhotosController: ToolController, UICollectionViewDataSource, UIColl
         let options = thumbnailOptions()
         let request = imageManager.requestImage(for: asset, targetSize: thumbnailSize, contentMode: .aspectFill, options: options) { [weak cell] image, info in
             guard (info?[PHImageCancelledKey] as? Bool) != true else { return }
-            DispatchQueue.main.async { if cell?.representedIdentifier == asset.localIdentifier { cell?.setImage(image) } }
+            DispatchQueue.main.async { [weak cell = cell] in if cell?.representedIdentifier == asset.localIdentifier { cell?.setImage(image) } }
         }
         cell.requestID = request
         cell.isSelected = indexPath.item == slideshow.selectedIndex
@@ -242,15 +242,18 @@ final class PhotosController: ToolController, UICollectionViewDataSource, UIColl
         let size = CGSize(width: min(2048, max(800, imageView.bounds.width * 2)), height: min(2048, max(600, imageView.bounds.height * 2)))
         let options = PHImageRequestOptions(); options.deliveryMode = .highQualityFormat; options.resizeMode = .fast; options.isNetworkAccessAllowed = true
         options.progressHandler = { [weak self] progress, _, _, _ in
-            DispatchQueue.main.async { guard let self, previewGeneration == generation else { return }; countLabel.text = "Downloading from iCloud · \(Int(progress * 100))%" }
+            DispatchQueue.main.async { [weak self = self] in
+                guard let self, self.previewGeneration == generation else { return }
+                self.countLabel.text = "Downloading from iCloud · \(Int(progress * 100))%"
+            }
         }
         previewRequest = imageManager.requestImage(for: asset, targetSize: size, contentMode: .aspectFit, options: options) { [weak self] image, info in
-            DispatchQueue.main.async {
-                guard let self, previewGeneration == generation, (info?[PHImageCancelledKey] as? Bool) != true else { return }
-                spinner.stopAnimating(); previewRequest = PHInvalidImageRequestID
-                if let image { imageView.image = image; updateControls() }
-                else { imageView.image = nil; countLabel.text = (info?[PHImageErrorKey] as? Error)?.localizedDescription ?? "This photo is unavailable. Check the connection or choose another image." }
-                armSlideshow()
+            DispatchQueue.main.async { [weak self = self] in
+                guard let self, self.previewGeneration == generation, (info?[PHImageCancelledKey] as? Bool) != true else { return }
+                self.spinner.stopAnimating(); self.previewRequest = PHInvalidImageRequestID
+                if let image { self.imageView.image = image; self.updateControls() }
+                else { self.imageView.image = nil; self.countLabel.text = (info?[PHImageErrorKey] as? Error)?.localizedDescription ?? "This photo is unavailable. Check the connection or choose another image." }
+                self.armSlideshow()
             }
         }
     }

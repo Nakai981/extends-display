@@ -1,0 +1,12 @@
+test_driver_error_and_ansi_are_preserved_without_escape_codes (test_build_diagnostics.BuildDiagnosticTests.test_driver_error_and_ansi_are_preserved_without_escape_codes) ... ok
+test_source_error_includes_context_and_deduplicates_architectures (test_build_diagnostics.BuildDiagnosticTests.test_source_error_includes_context_and_deduplicates_architectures) ... ok
+test_user_warning_and_failed_summary_are_not_a_root_error (test_build_diagnostics.BuildDiagnosticTests.test_user_warning_and_failed_summary_are_not_a_root_error) ... ok
+test_warning_quoting_word_error_is_not_a_diagnostic (test_build_diagnostics.BuildDiagnosticTests.test_warning_quoting_word_error_is_not_a_diagnostic) ... ok
+test_ios_failure_preserves_exit_code_and_does_not_build_mac (test_build_script.BuildScriptTests.test_ios_failure_preserves_exit_code_and_does_not_build_mac) ... ok
+test_mac_failure_preserves_exit_code_and_both_logs (test_build_script.BuildScriptTests.test_mac_failure_preserves_exit_code_and_both_logs) ... ok
+test_success_builds_both_targets (test_build_script.BuildScriptTests.test_success_builds_both_targets) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 1.043s
+
+OK

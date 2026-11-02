@@ -162,10 +162,10 @@ final class FilesController: ToolController, UITableViewDataSource, UITableViewD
             guard let self else { return }
             switch result {
             case .success(let items):
-                if files != items { files = items; collection.reloadData() }
-                empty.text = items.isEmpty ? "This folder is empty" : ""
-                footer.text = "\(items.count) items · Sorted by \(sort.title.lowercased())"
-            case .failure(let error): files = []; collection.reloadData(); empty.text = error.localizedDescription; footer.text = "Could not read folder · Refresh to retry"
+                if self.files != items { self.files = items; self.collection.reloadData() }
+                self.empty.text = items.isEmpty ? "This folder is empty" : ""
+                self.footer.text = "\(items.count) items · Sorted by \(self.sort.title.lowercased())"
+            case .failure(let error): self.files = []; self.collection.reloadData(); self.empty.text = error.localizedDescription; self.footer.text = "Could not read folder · Refresh to retry"
             }
         }
     }
@@ -188,9 +188,9 @@ final class FilesController: ToolController, UITableViewDataSource, UITableViewD
     private func newFolder() {
         ask("New folder") { [weak self] name in
             guard let self else { return }
-            guard FileOperations.validName(name) else { alert("Invalid name"); return }
-            let destination = current.appendingPathComponent(name, isDirectory: true)
-            perform("Create folder") { try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: false) }
+            guard FileOperations.validName(name) else { self.alert("Invalid name"); return }
+            let destination = self.current.appendingPathComponent(name, isDirectory: true)
+            self.perform("Create folder") { try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: false) }
         }
     }
     private func perform(_ title: String, action: @escaping () throws -> Void, completion: (() -> Void)? = nil) {
@@ -200,8 +200,8 @@ final class FilesController: ToolController, UITableViewDataSource, UITableViewD
             defer { leases.forEach { $0.stopAccessingSecurityScopedResource() } }
             do {
                 try action()
-                DispatchQueue.main.async { completion?(); NotificationCenter.default.post(name: Notification.Name("filesChanged"), object: nil); self?.reload() }
-            } catch { DispatchQueue.main.async { self?.alert(title + " failed", message: error.localizedDescription); self?.reload() } }
+                DispatchQueue.main.async { [weak self = self] in completion?(); NotificationCenter.default.post(name: Notification.Name("filesChanged"), object: nil); self?.reload() }
+            } catch { DispatchQueue.main.async { [weak self = self] in self?.alert(title + " failed", message: error.localizedDescription); self?.reload() } }
         }
     }
     private func pick(folder: Bool) {
@@ -266,7 +266,7 @@ final class FilesController: ToolController, UITableViewDataSource, UITableViewD
     }
     private func rename(_ url: URL) {
         ask("Rename", initial: url.lastPathComponent) { [weak self] name in
-            self?.perform("Rename", action: { _ = try FileOperations.rename(url, to: name) }, completion: { [weak self] in self?.clearPreview() })
+            self?.perform("Rename", action: { _ = try FileOperations.rename(url, to: name) }, completion: { [weak self = self] in self?.clearPreview() })
         }
     }
     private func paste() {
@@ -279,8 +279,8 @@ final class FilesController: ToolController, UITableViewDataSource, UITableViewD
         let confirm = UIAlertController(title: sandbox ? "Move to Trash?" : "Delete permanently?", message: sandbox ? "You can restore this item from Trash." : "This mounted-storage item cannot be restored by ExtendDesk.", preferredStyle: .alert)
         confirm.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         confirm.addAction(UIAlertAction(title: sandbox ? "Move to Trash" : "Delete", style: .destructive) { [weak self] _ in
-            guard let self else { return }; let store = trash
-            perform("Delete", action: { if sandbox { try store.trash(url) } else { try FileManager.default.removeItem(at: url) } }, completion: { [weak self] in self?.clearPreview() })
+            guard let self else { return }; let store = self.trash
+            self.perform("Delete", action: { if sandbox { try store.trash(url) } else { try FileManager.default.removeItem(at: url) } }, completion: { [weak self = self] in self?.clearPreview() })
         }); presenter.present(confirm, animated: true)
     }
     private func showTrash() {
@@ -288,14 +288,14 @@ final class FilesController: ToolController, UITableViewDataSource, UITableViewD
         Self.work.async { [weak self] in
             do {
                 let records = try store.records()
-                DispatchQueue.main.async {
+                DispatchQueue.main.async { [weak self = self] in
                     guard let self else { return }
                     let menu = UIAlertController(title: "Trash · Restore an item", message: records.isEmpty ? "Trash is empty." : "Original items are restored only if the destination is available.", preferredStyle: .actionSheet)
                     for record in records {
-                        menu.addAction(UIAlertAction(title: record.name, style: .default) { [weak self] _ in self?.perform("Restore", action: { _ = try store.restore(record) }) })
-                    }; showMenu(menu)
+                        menu.addAction(UIAlertAction(title: record.name, style: .default) { [weak self = self] _ in self?.perform("Restore", action: { _ = try store.restore(record) }) })
+                    }; self.showMenu(menu)
                 }
-            } catch { DispatchQueue.main.async { self?.alert("Cannot read Trash", message: error.localizedDescription) } }
+            } catch { DispatchQueue.main.async { [weak self = self] in self?.alert("Cannot read Trash", message: error.localizedDescription) } }
         }
     }
     private func showMenu(_ menu: UIAlertController) {
@@ -322,14 +322,14 @@ final class FilesController: ToolController, UITableViewDataSource, UITableViewD
         } else if ext == "pdf" {
             Self.previews.async { [weak self] in
                 let document = PDFDocument(url: url)
-                DispatchQueue.main.async { guard let self, previewGeneration == generation, let document else { return }; attachPreview(PDFToolController(document: document, name: url.deletingPathExtension().lastPathComponent)) }
+                DispatchQueue.main.async { [weak self = self] in guard let self, self.previewGeneration == generation, let document else { return }; self.attachPreview(PDFToolController(document: document, name: url.deletingPathExtension().lastPathComponent)) }
             }
         } else if ["jpg", "jpeg", "png", "heic", "gif", "webp"].contains(ext) {
             Self.previews.async { [weak self] in
                 let options: [CFString: Any] = [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: 2048, kCGImageSourceCreateThumbnailWithTransform: true]
                 let source = CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary)
                 let image = source.flatMap { CGImageSourceCreateThumbnailAtIndex($0, 0, options as CFDictionary) }.map { UIImage(cgImage: $0) }
-                DispatchQueue.main.async { guard let self, previewGeneration == generation else { return }; let imageView = UIImageView(image: image); imageView.contentMode = .scaleAspectFit; preview.addSubview(imageView); view.setNeedsLayout() }
+                DispatchQueue.main.async { [weak self = self] in guard let self, self.previewGeneration == generation else { return }; let imageView = UIImageView(image: image); imageView.contentMode = .scaleAspectFit; self.preview.addSubview(imageView); self.view.setNeedsLayout() }
             }
         } else if ["txt", "md", "json", "csv", "log", "swift", "html"].contains(ext) {
             Self.previews.async { [weak self] in
@@ -339,7 +339,7 @@ final class FilesController: ToolController, UITableViewDataSource, UITableViewD
                     let data = try handle.read(upToCount: 2 * 1024 * 1024) ?? Data()
                     value = String(decoding: data, as: UTF8.self)
                 } catch { value = error.localizedDescription }
-                DispatchQueue.main.async { guard let self, previewGeneration == generation else { return }; let text = UITextView(); text.isEditable = false; text.font = .monospacedSystemFont(ofSize: 13, weight: .regular); text.text = value; preview.addSubview(text); footer.text = "Text preview · first 2 MiB"; view.setNeedsLayout() }
+                DispatchQueue.main.async { [weak self = self] in guard let self, self.previewGeneration == generation else { return }; let text = UITextView(); text.isEditable = false; text.font = .monospacedSystemFont(ofSize: 13, weight: .regular); text.text = value; self.preview.addSubview(text); self.footer.text = "Text preview · first 2 MiB"; self.view.setNeedsLayout() }
             }
         } else {
             let controller = QLPreviewController(); controller.dataSource = self; presenter.present(controller, animated: true)
@@ -418,7 +418,7 @@ final class NotesController: ToolController, UITextViewDelegate {
     func textViewDidChange(_ textView: UITextView) { writer.schedule(textView.text, to: file) { [weak self] error in self?.alert("Save failed", message: error.localizedDescription) } }
     override func insertText(_ value: String) { guard text.isEditable else { return }; if value == "\u{8}" { text.deleteBackward() } else { text.insertText(value) }; textViewDidChange(text) }
     private func editOnDevice() {
-        let editor = NoteEditor(text: text.text) { [weak self] value in self?.text.text = value; if let self { textViewDidChange(text) } }
+        let editor = NoteEditor(text: text.text) { [weak self] value in self?.text.text = value; if let self { self.textViewDidChange(self.text) } }
         presenter.present(UINavigationController(rootViewController: editor), animated: true)
     }
     private func openNote() {
@@ -427,11 +427,11 @@ final class NotesController: ToolController, UITextViewDelegate {
         for url in files.filter({ $0.pathExtension == "txt" }) {
             alert.addAction(UIAlertAction(title: url.deletingPathExtension().lastPathComponent, style: .default) { [weak self] _ in
                 guard let self else { return }
-                text.isEditable = false; toolbar.isUserInteractionEnabled = false
-                writer.flush { [weak self] result in
-                    guard let self else { return }; defer { text.isEditable = true; toolbar.isUserInteractionEnabled = true }
+                self.text.isEditable = false; self.toolbar.isUserInteractionEnabled = false
+                self.writer.flush { [weak self = self] result in
+                    guard let self else { return }; defer { self.text.isEditable = true; self.toolbar.isUserInteractionEnabled = true }
                     guard case .success = result else { return }
-                    file = url; UserDefaults.standard.set(url.lastPathComponent, forKey: "note.\(id)"); text.text = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
+                    self.file = url; UserDefaults.standard.set(url.lastPathComponent, forKey: "note.\(self.id)"); self.text.text = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
                 }
             })
         }
@@ -440,17 +440,17 @@ final class NotesController: ToolController, UITextViewDelegate {
     private func renameNote() {
         ask("Note name", initial: file.deletingPathExtension().lastPathComponent) { [weak self] name in
             guard let self, !name.contains("/"), name != ".", name != ".." else { return }
-            let target = file.deletingLastPathComponent().appendingPathComponent(name + ".txt")
-            text.isEditable = false; toolbar.isUserInteractionEnabled = false
-            writer.flush { [weak self] result in
-                guard let self else { return }; defer { text.isEditable = true; toolbar.isUserInteractionEnabled = true }
+            let target = self.file.deletingLastPathComponent().appendingPathComponent(name + ".txt")
+            self.text.isEditable = false; self.toolbar.isUserInteractionEnabled = false
+            self.writer.flush { [weak self = self] result in
+                guard let self else { return }; defer { self.text.isEditable = true; self.toolbar.isUserInteractionEnabled = true }
                 guard case .success = result else { return }
                 do {
-                    if FileManager.default.fileExists(atPath: file.path) { try FileManager.default.moveItem(at: file, to: target) }
-                    else { try text.text.write(to: target, atomically: true, encoding: .utf8) }
-                    file = target; UserDefaults.standard.set(target.lastPathComponent, forKey: "note.\(id)")
-                    Workspace.shared.update(id) { $0.title = name }; NotificationCenter.default.post(name: Notification.Name("filesChanged"), object: nil)
-                } catch { alert("Rename failed", message: error.localizedDescription) }
+                    if FileManager.default.fileExists(atPath: self.file.path) { try FileManager.default.moveItem(at: self.file, to: target) }
+                    else { try self.text.text.write(to: target, atomically: true, encoding: .utf8) }
+                    self.file = target; UserDefaults.standard.set(target.lastPathComponent, forKey: "note.\(self.id)")
+                    Workspace.shared.update(self.id) { $0.title = name }; NotificationCenter.default.post(name: Notification.Name("filesChanged"), object: nil)
+                } catch { self.alert("Rename failed", message: error.localizedDescription) }
             }
         }
     }
@@ -479,7 +479,7 @@ final class PDFToolController: ToolController {
             guard let self else { return }
             let bounds = page.bounds(for: .mediaBox)
             let annotation = PDFAnnotation(bounds: CGRect(x: bounds.minX + 30, y: bounds.maxY - 60, width: 28, height: 28), forType: .text, withProperties: nil)
-            annotation.contents = value; annotation.color = .systemYellow; page.addAnnotation(annotation); pdf.setNeedsDisplay()
+            annotation.contents = value; annotation.color = .systemYellow; page.addAnnotation(annotation); self.pdf.setNeedsDisplay()
         }
     }
     private func saveCopy() {

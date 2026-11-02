@@ -5,6 +5,7 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
+      - run: python3 -m unittest discover -s Tests -p 'test_*.py'
       - run: brew install xcodegen
       - run: bash scripts/build-mac.sh
       - name: Unit tests on available iPhone simulator

@@ -48,20 +48,20 @@ final class DirectoryLoader {
     func load(_ directory: URL, sort: FileSortOrder, completion: @escaping (Result<[FileBrowserItem], Error>) -> Void) {
         let id = UUID(); lock.lock(); generation = id; lock.unlock()
         queue.async { [weak self] in
-            guard let self, isCurrent(id) else { return }
+            guard let self, self.isCurrent(id) else { return }
             let result: Result<[FileBrowserItem], Error>
             do {
                 let keys: Set<URLResourceKey> = [.isDirectoryKey, .fileSizeKey, .contentModificationDateKey]
                 let urls = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: Array(keys), options: [.skipsHiddenFiles])
                 var items: [FileBrowserItem] = []; items.reserveCapacity(urls.count)
                 for url in urls {
-                    guard isCurrent(id) else { return }
+                    guard self.isCurrent(id) else { return }
                     let values = try? url.resourceValues(forKeys: keys)
                     items.append(FileBrowserItem(url: url, isDirectory: values?.isDirectory ?? false, size: Int64(values?.fileSize ?? 0), modified: values?.contentModificationDate ?? .distantPast))
                 }
                 result = .success(sort.sorted(items))
             } catch { result = .failure(error) }
-            DispatchQueue.main.async { [weak self] in guard self?.isCurrent(id) == true else { return }; completion(result) }
+            DispatchQueue.main.async { [weak self = self] in guard self?.isCurrent(id) == true else { return }; completion(result) }
         }
     }
 }

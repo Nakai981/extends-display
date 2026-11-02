@@ -172,7 +172,7 @@ final class DesktopFileIndex {
         pending = (words, completion)
         guard !indexing else { return }
         indexing = true; let requestVersion = version
-        DispatchQueue.global(qos: .userInitiated).async {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             var urls: [URL] = []
             let keys: Set<URLResourceKey> = [.isSymbolicLinkKey]
             if let enumerator = FileManager.default.enumerator(at: Workspace.documents, includingPropertiesForKeys: Array(keys), options: [.skipsHiddenFiles, .skipsPackageDescendants]) {
@@ -182,10 +182,10 @@ final class DesktopFileIndex {
                     urls.append(url)
                 }
             }
-            DispatchQueue.main.async { [weak self] in
+            DispatchQueue.main.async { [weak self = self] in
                 guard let self else { return }
-                indexing = false; indexed = urls; indexedAt = version == requestVersion ? Date() : .distantPast
-                if let request = pending { pending = nil; request.completion(Array(urls.filter { $0.lastPathComponent.localizedCaseInsensitiveContains(request.query) }.prefix(20))) }
+                self.indexing = false; self.indexed = urls; self.indexedAt = self.version == requestVersion ? Date() : .distantPast
+                if let request = self.pending { self.pending = nil; request.completion(Array(urls.filter { $0.lastPathComponent.localizedCaseInsensitiveContains(request.query) }.prefix(20))) }
             }
         }
     }

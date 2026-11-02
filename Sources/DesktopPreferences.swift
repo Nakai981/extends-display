@@ -101,7 +101,7 @@ final class DesktopPreferences {
     private func changed() {
         guard !notificationPending else { return }; notificationPending = true
         DispatchQueue.main.async { [weak self] in
-            guard let self else { return }; notificationPending = false
+            guard let self else { return }; self.notificationPending = false
             NotificationCenter.default.post(name: .appearanceChanged, object: self)
         }
     }
@@ -119,27 +119,27 @@ final class DesktopPreferences {
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
                 let destination = directory.appendingPathComponent("wallpaper-" + request.uuidString + ".jpg")
                 try data.write(to: destination, options: .atomic)
-                DispatchQueue.main.async {
-                    guard let self, imageRequest == request else {
+                DispatchQueue.main.async { [weak self = self] in
+                    guard let self, self.imageRequest == request else {
                         try? FileManager.default.removeItem(at: destination)
                         completion(.failure(NSError(domain: NSCocoaErrorDomain, code: NSUserCancelledError))); return
                     }
-                    let previous = customWallpaperURL
-                    defaults.set(destination.lastPathComponent, forKey: "appearance.wallpaperFile")
-                    customWallpaperImage = thumbnail; imageLoading = false
-                    let waiting = imageCallbacks; imageCallbacks.removeAll(); waiting.forEach { $0(thumbnail) }
-                    changed(); completion(.success(Void()))
-                    if let previous, previous != destination { images.async { try? FileManager.default.removeItem(at: previous) } }
+                    let previous = self.customWallpaperURL
+                    self.defaults.set(destination.lastPathComponent, forKey: "appearance.wallpaperFile")
+                    self.customWallpaperImage = thumbnail; self.imageLoading = false
+                    let waiting = self.imageCallbacks; self.imageCallbacks.removeAll(); waiting.forEach { $0(thumbnail) }
+                    self.changed(); completion(.success(Void()))
+                    if let previous, previous != destination { self.images.async { try? FileManager.default.removeItem(at: previous) } }
                 }
             } catch {
-                DispatchQueue.main.async { [weak self] in
-                    if let self, imageRequest == request {
+                DispatchQueue.main.async { [weak self = self] in
+                    if let self, self.imageRequest == request {
                         // A refresh may already be loading the previous wallpaper.
                         // Keep that job's callbacks intact; otherwise restart the
                         // load invalidated when this import began.
-                        if !imageLoading, !imageCallbacks.isEmpty {
-                            let waiting = imageCallbacks; imageCallbacks.removeAll()
-                            loadCustomWallpaper { image in waiting.forEach { $0(image) } }
+                        if !self.imageLoading, !self.imageCallbacks.isEmpty {
+                            let waiting = self.imageCallbacks; self.imageCallbacks.removeAll()
+                            self.loadCustomWallpaper { image in waiting.forEach { $0(image) } }
                         }
                     }
                     completion(.failure(error))
@@ -155,10 +155,10 @@ final class DesktopPreferences {
         let request = imageRequest
         images.async { [weak self] in
             let image = UIImage(contentsOfFile: url.path)
-            DispatchQueue.main.async {
-                guard let self, imageRequest == request, customWallpaperURL == url else { return }
-                customWallpaperImage = image; imageLoading = false
-                let callbacks = imageCallbacks; imageCallbacks.removeAll(); callbacks.forEach { $0(image) }
+            DispatchQueue.main.async { [weak self = self] in
+                guard let self, self.imageRequest == request, self.customWallpaperURL == url else { return }
+                self.customWallpaperImage = image; self.imageLoading = false
+                let callbacks = self.imageCallbacks; self.imageCallbacks.removeAll(); callbacks.forEach { $0(image) }
             }
         }
     }

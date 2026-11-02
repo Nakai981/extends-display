@@ -1,6 +1,7 @@
 import UIKit
 import Darwin
 
+@MainActor
 final class DesktopSharing {
     static let shared = DesktopSharing()
     private var server: LocalHTTPServer?
@@ -42,18 +43,26 @@ final class DesktopSharing {
         guard !frameInFlight else { return }
         frameInFlight = true; let requestGeneration = generation
         desktop.snapshot { [weak self] image in
-            guard let self else { return }
-            encodingQueue.async {
-                let data = image?.jpegData(compressionQuality: 0.6)
-                DispatchQueue.main.async { [weak self] in
-                    guard let self, generation == requestGeneration else { return }
-                    frameInFlight = false; cachedFrame = data; capturedAt = Date()
-                    let pending = frameWaiters; frameWaiters.removeAll()
-                    let response = data.map { LocalHTTPServer.Response(type: "image/jpeg", data: $0) } ?? .text("Capture unavailable", status: 503)
-                    pending.forEach { $0(response) }
-                }
-            }
+            self?.encodeFrame(image, generation: requestGeneration)
         }
+    }
+    private func encodeFrame(_ image: UIImage?, generation requestGeneration: Int) {
+        // The worker captures immutable image data and a weak-owner completion;
+        // it never implicitly promotes the service to a strong capture.
+        let completed: (Data?) -> Void = { [weak self] data in
+            self?.finishFrame(data, generation: requestGeneration)
+        }
+        encodingQueue.async { [image, completed] in
+            let data = image?.jpegData(compressionQuality: 0.6)
+            DispatchQueue.main.async { completed(data) }
+        }
+    }
+    private func finishFrame(_ data: Data?, generation requestGeneration: Int) {
+        guard generation == requestGeneration else { return }
+        frameInFlight = false; cachedFrame = data; capturedAt = Date()
+        let pending = frameWaiters; frameWaiters.removeAll()
+        let response = data.map { LocalHTTPServer.Response(type: "image/jpeg", data: $0) } ?? .text("Capture unavailable", status: 503)
+        pending.forEach { $0(response) }
     }
     private func handle(_ request: LocalHTTPServer.Request, reply: @escaping (LocalHTTPServer.Response) -> Void) {
         let supplied = request.headers["x-extenddesk-token"] ?? request.query.first(where: { $0.name == "token" })?.value

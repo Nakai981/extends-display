@@ -36,12 +36,12 @@ final class LocalHTTPServer {
                 default: break
                 }
             }
-            listener.newConnectionHandler = { [weak self] connection in
+            listener.newConnectionHandler = { [weak self = self] connection in
                 guard let self else { connection.cancel(); return }
-                guard connections.count < 12 else { connection.cancel(); return }
-                let id = UUID(); connections[id] = connection; connection.start(queue: queue)
-                queue.asyncAfter(deadline: .now() + 10) { [weak self, weak connection] in connection?.cancel(); self?.connections.removeValue(forKey: id) }
-                receive(connection, id: id, buffer: Data())
+                guard self.connections.count < 12 else { connection.cancel(); return }
+                let id = UUID(); self.connections[id] = connection; connection.start(queue: self.queue)
+                self.queue.asyncAfter(deadline: .now() + 10) { [weak self = self, weak connection = connection] in connection?.cancel(); self?.connections.removeValue(forKey: id) }
+                self.receive(connection, id: id, buffer: Data())
             }; listener.start(queue: queue)
         } catch { DispatchQueue.main.async { completion(.failure(error)) } }
         }
@@ -51,28 +51,28 @@ final class LocalHTTPServer {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 32768) { [weak self] data, _, complete, error in
             guard let self else { return }
             var buffer = buffer; if let data { buffer.append(data) }
-            guard buffer.count <= 65536 else { send(.text("Request too large", status: 413), to: connection, id: id); return }
+            guard buffer.count <= 65536 else { self.send(.text("Request too large", status: 413), to: connection, id: id); return }
             if let range = buffer.range(of: Data("\r\n\r\n".utf8)), let header = String(data: buffer[..<range.lowerBound], encoding: .utf8) {
                 let lines = header.components(separatedBy: "\r\n")
                 let parts = (lines.first ?? "").split(separator: " ")
-                guard parts.count == 3, parts[2] == "HTTP/1.1", ["GET", "POST"].contains(String(parts[0])) else { send(.text("Bad request", status: 400), to: connection, id: id); return }
+                guard parts.count == 3, parts[2] == "HTTP/1.1", ["GET", "POST"].contains(String(parts[0])) else { self.send(.text("Bad request", status: 400), to: connection, id: id); return }
                 var headers: [String: String] = [:]
                 for line in lines.dropFirst() {
                     guard let colon = line.firstIndex(of: ":") else { continue }
                     let key = line[..<colon].lowercased()
-                    guard headers[key] == nil else { send(.text("Duplicate header", status: 400), to: connection, id: id); return }
+                    guard headers[key] == nil else { self.send(.text("Duplicate header", status: 400), to: connection, id: id); return }
                     headers[key] = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
                 }
-                guard headers["transfer-encoding"] == nil, let length = Int(headers["content-length"] ?? "0"), length >= 0, length <= 32768 else { send(.text("Bad length", status: 400), to: connection, id: id); return }
+                guard headers["transfer-encoding"] == nil, let length = Int(headers["content-length"] ?? "0"), length >= 0, length <= 32768 else { self.send(.text("Bad length", status: 400), to: connection, id: id); return }
                 let body = buffer[range.upperBound...]
                 if body.count >= length {
-                    guard let components = URLComponents(string: "http://localhost" + String(parts[1])) else { send(.text("Bad URL", status: 400), to: connection, id: id); return }
+                    guard let components = URLComponents(string: "http://localhost" + String(parts[1])) else { self.send(.text("Bad URL", status: 400), to: connection, id: id); return }
                     let request = Request(method: String(parts[0]), path: components.path, query: components.queryItems ?? [], headers: headers, body: Data(body.prefix(length)))
                     DispatchQueue.main.async { self.handler(request) { response in self.queue.async { self.send(response, to: connection, id: id) } } }; return
                 }
             }
-            if complete || error != nil { connection.cancel(); connections.removeValue(forKey: id) }
-            else { receive(connection, id: id, buffer: buffer) }
+            if complete || error != nil { connection.cancel(); self.connections.removeValue(forKey: id) }
+            else { self.receive(connection, id: id, buffer: buffer) }
         }
     }
     private func send(_ response: Response, to connection: NWConnection, id: UUID) {

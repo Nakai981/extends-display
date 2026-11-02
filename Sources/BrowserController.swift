@@ -206,20 +206,20 @@ final class BrowserController: UIViewController, WKNavigationDelegate, WKUIDeleg
         findStatus.text = "Searching…"
         let active = web
         active.find(term, configuration: configuration) { [weak self, weak active] result in
-            guard let self, let active, findVisible, findGeneration == generation, session.selectedID == tab, findField.text == term else { return }
-            guard result.matchFound else { findStatus.text = "No match"; return }
-            findStatus.text = "Match found"
-            if let count = findCountCache, count.tab == tab, count.term == term {
-                showFindCount(count.count, capped: count.capped); return
+            guard let self, let active, self.findVisible, self.findGeneration == generation, self.session.selectedID == tab, self.findField.text == term else { return }
+            guard result.matchFound else { self.findStatus.text = "No match"; return }
+            self.findStatus.text = "Match found"
+            if let count = self.findCountCache, count.tab == tab, count.term == term {
+                self.showFindCount(count.count, capped: count.capped); return
             }
             // This count is deliberately labeled main-document text. Native WebKit
             // find can also match frames whose text an isolated script cannot read.
             let countScript = "const text=(document.body?.innerText??'').slice(0,2000000).toLocaleLowerCase(); const term=query.toLocaleLowerCase(); let count=0,offset=0; while(term && (offset=text.indexOf(term,offset))!==-1 && count<1000){count++;offset+=term.length;} return {count:count,capped:count>=1000||text.length>=2000000};"
-            active.callAsyncJavaScript(countScript, arguments: ["query": term], in: nil, in: .defaultClient) { [weak self] response in
-                guard let self, findGeneration == generation, session.selectedID == tab, findVisible else { return }
+            active.callAsyncJavaScript(countScript, arguments: ["query": term], in: nil, in: .defaultClient) { [weak self = self] response in
+                guard let self, self.findGeneration == generation, self.session.selectedID == tab, self.findVisible else { return }
                 if case .success(let value) = response, let values = value as? [String: Any], let count = values["count"] as? Int, count > 0 {
                     let capped = values["capped"] as? Bool ?? false
-                    findCountCache = (tab, term, count, capped); showFindCount(count, capped: capped)
+                    self.findCountCache = (tab, term, count, capped); self.showFindCount(count, capped: capped)
                 }
             }
         }
